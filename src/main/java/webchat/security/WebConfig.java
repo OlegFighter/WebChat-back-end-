@@ -39,7 +39,7 @@ public class WebConfig extends WebSecurityConfigurerAdapter {
         //authentication configuration
         .authorizeRequests().antMatchers("/sign_up").permitAll()
         .anyRequest().authenticated();
-    }
+    }/////
 
     @Bean
     public FilterRegistrationBean<CorsFilter> simpleCorsFilter() {
