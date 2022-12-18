@@ -1,10 +1,14 @@
 package webchat.controller;
 
 import lombok.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.web.bind.annotation.GetMapping;
 import webchat.model.Chat;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import webchat.model.Message;
 import webchat.model.User;
 import webchat.notFoundExceptions.ChatNotFoundException;
 import webchat.notFoundExceptions.UserNotFoundException;
@@ -13,8 +17,7 @@ import webchat.repository.MessageRepository;
 import webchat.repository.UserRepository;
 
 import java.io.Serializable;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @RestController
 public class ChatController {
@@ -28,14 +31,16 @@ public class ChatController {
         this.userRepository = userRepository;
     }
 
-    /*@PostMapping("/new_chat") //НЕ ТРОГАТЬ! Служебный метод для бэкэнда
+    /*@PostMapping("/new_chat") // Служебный метод
     newChatResponseBody createChat(@RequestBody NewChatRequest newChatRequest){
         User temp = userRepository.findById(newChatRequest.usersId.get(0)).orElseThrow();
         Chat tempChat = new Chat(newChatRequest.chatName, Set.of(temp), );
         chatRepository.save(tempChat);
         return new newChatResponseBody(tempChat.getChatName(),tempChat.getChatId(), tempChat.getUsers());
     }*/
-    @PostMapping("/create_chat") //problems with response!
+    @PostMapping("/create_chat")
+    /*NewChatFromUserResponse creatingChatFromUser(@RequestBody NewChatFromUserRequestBody newChatFromUserRequestBody,
+                                                 @AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser)*/
     NewChatFromUserResponse creatingChatFromUser(@RequestBody NewChatFromUserRequestBody newChatFromUserRequestBody){
         User creator = userRepository.findById(newChatFromUserRequestBody.idOfCreator).
                 orElseThrow(() -> new UserNotFoundException(newChatFromUserRequestBody.idOfCreator));
@@ -43,23 +48,45 @@ public class ChatController {
                 orElseThrow(() -> new UserNotFoundException(newChatFromUserRequestBody.idOfRequested));
         Set<User> usersOfTheChat = Set.of(creator, requestedUser);
         Chat newChat =
-                new Chat(newChatFromUserRequestBody.chatName, usersOfTheChat, newChatFromUserRequestBody.idOfCreator);
+                new Chat(newChatFromUserRequestBody.chatName, usersOfTheChat, creator.getUserId());
         chatRepository.save(newChat);
         userRepository.save(creator);
         userRepository.save(requestedUser);
         return new NewChatFromUserResponse(newChat.getChatId());
     }
 
-    @PostMapping("/add_to_chat") //problems with response!
+
+    @PostMapping("/add_to_chat")
     AddToChatResponse addingANewUserToTheChat(@RequestBody AddToChatRequest addToChatRequest){
         User requestedUser = userRepository.findById(addToChatRequest.requestedUserId).
                 orElseThrow( () -> new UserNotFoundException(addToChatRequest.requestedUserId));
         Chat changeableChat = chatRepository.findById(addToChatRequest.chatId).
                 orElseThrow( () -> new ChatNotFoundException(addToChatRequest.chatId));
+        if(changeableChat.getUsers().contains(requestedUser)){
+            return new AddToChatResponse(null);
+        }
         changeableChat.addUser(requestedUser);
         chatRepository.save(changeableChat);
         userRepository.save(requestedUser);
-        return new AddToChatResponse(changeableChat.getChatId(), changeableChat.getUsers(), requestedUser.getUserId());
+        return new AddToChatResponse(requestedUser.getUserId());
+    }
+
+    @PostMapping ("/messages")
+    ArrayList<Message> messagesOfTheChat(@RequestBody messagesRequest info){
+        Chat chat = chatRepository.findById(info.chatId).orElseThrow(() -> new ChatNotFoundException(info.chatId));
+        Set<Message> messages = chat.getMessagesInTheChat();
+        ArrayList<Message> messageList = new ArrayList<Message>(messages);
+        Collections.sort(messageList);
+        return messageList;
+    }
+
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @ToString
+    @Getter
+    @Setter
+    private static class messagesRequest implements Serializable{
+        Long chatId;
     }
 
     @AllArgsConstructor
@@ -119,8 +146,6 @@ public class ChatController {
     @Getter
     @Setter
     public static class AddToChatResponse implements Serializable{
-        Long chatId;
-        Set<User> usersOfTheChat;
         Long whoWasAddedId;
     }
 }
