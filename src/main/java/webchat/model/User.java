@@ -16,19 +16,12 @@ public class User {
     @Id
     @GeneratedValue
     long userId;
-    @Column(unique = true)
     String name;
-    String password;
 //    @ManyToMany(mappedBy = "users")
 //    Set<Chat> chats;
 
-
-    public User(String name){
+    public User(String name) {
         this.name = name;
-    }
-    public User(String name, String password) {
-        this.name = name;
-        this.password = password;
     }
     public User() {}
 
