@@ -20,7 +20,7 @@ public class Chat {
     long chatId;
     String chatName;
     long creatorId;
-    @OneToMany
+    @OneToMany(fetch = FetchType.EAGER)
     private Set<Message> messagesInTheChat;
     @ManyToMany(cascade =  {CascadeType.ALL})
     private Set<User> users;
