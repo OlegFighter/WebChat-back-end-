@@ -15,7 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
-//import webchat.AuthenticationService.JPAUserDetailsService;
+import webchat.AuthenticationService.JPAUserDetailsService;
 
 import java.util.List;
 
@@ -25,9 +25,8 @@ import static org.springframework.boot.context.properties.bind.Bindable.listOf;
 @EnableWebSecurity
 @EnableConfigurationProperties
 public class WebConfig extends WebSecurityConfigurerAdapter {
-    //extends WebSecurityConfigurerAdapter
-    //@Autowired
-    //JPAUserDetailsService userDetailsService;
+    @Autowired
+    JPAUserDetailsService userDetailsService;
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http
@@ -39,7 +38,7 @@ public class WebConfig extends WebSecurityConfigurerAdapter {
         //authentication configuration
         .authorizeRequests().antMatchers("/sign_up").permitAll()
         .anyRequest().authenticated();
-    }/////
+    }
 
     @Bean
     public FilterRegistrationBean<CorsFilter> simpleCorsFilter() {
@@ -62,7 +61,7 @@ public class WebConfig extends WebSecurityConfigurerAdapter {
         bean.setOrder(Ordered.HIGHEST_PRECEDENCE);
         return bean;
     }
-/*
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -72,5 +71,5 @@ public class WebConfig extends WebSecurityConfigurerAdapter {
     public void configure(AuthenticationManagerBuilder builder)
             throws Exception {
         builder.userDetailsService(userDetailsService);
-    }*/
+    }
 }
