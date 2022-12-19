@@ -27,20 +27,21 @@ public class UserController {
     private final ChatRepository chatRepository;
     private final UserRepository userRepository;
     private final MessageRepository messageRepository;
-    public UserController(ChatRepository chatRepository, UserRepository userRepository, MessageRepository messageRepository) {
+    private final PasswordEncoder passwordEncoder;
+    public UserController(ChatRepository chatRepository, UserRepository userRepository, MessageRepository messageRepository, PasswordEncoder passwordEncoder) {
         this.chatRepository = chatRepository;
         this.userRepository = userRepository;
         this.messageRepository = messageRepository;
-        //this.passwordEncoder = passwordEncoder;
+        this.passwordEncoder = passwordEncoder;
     }
 
 
-    /*@PostMapping("/sign_up")
+    @PostMapping("/sign_up")
     AuthRequestBody createUser(@RequestBody NewAuthUserRequestBody newUser){
         User temp = new User(newUser.userName, passwordEncoder.encode(newUser.password));
         this.userRepository.save(temp);
         return new AuthRequestBody(temp.getUserId(), temp.getName());
-    }*/
+    }
 
     @PostMapping("/new_user")
     UserRequestBody createUserWithoutAuthorization(@RequestBody NewUserRequestBody newUserRequestBody){
