@@ -1,4 +1,4 @@
-package webchat.AuthenticationService;
+/*package webchat.AuthenticationService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -26,4 +26,4 @@ public class JPAUserDetailsService implements UserDetailsService{
 
         return new User(user.getName(), user.getPassword(), authorities);
     }
-}
+}*/

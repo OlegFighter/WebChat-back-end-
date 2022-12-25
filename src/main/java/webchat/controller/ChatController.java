@@ -39,9 +39,10 @@ public class ChatController {
         return new newChatResponseBody(tempChat.getChatName(),tempChat.getChatId(), tempChat.getUsers());
     }*/
     @PostMapping("/create_chat")
-    /*NewChatFromUserResponse creatingChatFromUser(@RequestBody NewChatFromUserRequestBody newChatFromUserRequestBody,
-                                                 @AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser)*/
-    NewChatFromUserResponse creatingChatFromUser(@RequestBody NewChatFromUserRequestBody newChatFromUserRequestBody){
+    //NewChatFromUserResponse creatingChatFromUser(@RequestBody NewChatFromUserRequestBody newChatFromUserRequestBody,
+                                                 //@AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser)
+    NewChatFromUserResponse creatingChatFromUser(@RequestBody NewChatFromUserRequestBody newChatFromUserRequestBody)
+    {
         User creator = userRepository.findById(newChatFromUserRequestBody.idOfCreator).
                 orElseThrow(() -> new UserNotFoundException(newChatFromUserRequestBody.idOfCreator));
         User requestedUser = userRepository.findById(newChatFromUserRequestBody.idOfRequested).

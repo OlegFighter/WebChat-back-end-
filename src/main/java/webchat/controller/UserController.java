@@ -27,6 +27,7 @@ public class UserController {
     private final ChatRepository chatRepository;
     private final UserRepository userRepository;
     private final MessageRepository messageRepository;
+    //private final PasswordEncoder passwordEncoder;
     public UserController(ChatRepository chatRepository, UserRepository userRepository, MessageRepository messageRepository) {
         this.chatRepository = chatRepository;
         this.userRepository = userRepository;
