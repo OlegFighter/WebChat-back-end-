@@ -15,8 +15,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
-//import webchat.AuthenticationService.JPAUserDetailsService;
-//import webchat.AuthenticationService.JPAUserDetailsService;
+import webchat.AuthenticationService.JPAUserDetailsService;
+import webchat.AuthenticationService.JPAUserDetailsService;
 
 import java.util.List;
 
@@ -27,8 +27,8 @@ import static org.springframework.boot.context.properties.bind.Bindable.listOf;
 @EnableConfigurationProperties
 public class WebConfig extends WebSecurityConfigurerAdapter {
 
-    //@Autowired
-    //JPAUserDetailsService userDetailsService;
+    @Autowired
+    JPAUserDetailsService userDetailsService;
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
@@ -36,12 +36,12 @@ public class WebConfig extends WebSecurityConfigurerAdapter {
                 //Cors configuration
                 .cors().and()
                 .csrf().disable().httpBasic()
-                .and().sessionManagement().disable();
+                .and().sessionManagement().disable()
 
-        //authentication configuration
-        //.authorizeRequests().antMatchers("/sign_up").permitAll()
-        //.anyRequest().authenticated();
-    }/////
+                //authentication configuration
+                .authorizeRequests().antMatchers("/sign_up").permitAll()
+                .anyRequest().authenticated();
+    }
 
     @Bean
     public FilterRegistrationBean<CorsFilter> simpleCorsFilter() {
@@ -69,7 +69,7 @@ public class WebConfig extends WebSecurityConfigurerAdapter {
         return bean;
     }
 
-    /*@Bean
+    @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
@@ -78,5 +78,5 @@ public class WebConfig extends WebSecurityConfigurerAdapter {
     public void configure(AuthenticationManagerBuilder builder)
             throws Exception {
         builder.userDetailsService(userDetailsService);
-    }*/
+    }
 }

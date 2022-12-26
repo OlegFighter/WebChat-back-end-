@@ -39,12 +39,11 @@ public class ChatController {
         return new newChatResponseBody(tempChat.getChatName(),tempChat.getChatId(), tempChat.getUsers());
     }*/
     @PostMapping("/create_chat")
-    //NewChatFromUserResponse creatingChatFromUser(@RequestBody NewChatFromUserRequestBody newChatFromUserRequestBody,
-                                                 //@AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser)
-    NewChatFromUserResponse creatingChatFromUser(@RequestBody NewChatFromUserRequestBody newChatFromUserRequestBody)
+    NewChatFromUserResponse creatingChatFromUser(@RequestBody NewChatFromUserRequestBody newChatFromUserRequestBody,
+                                                 @AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser)
     {
-        User creator = userRepository.findById(newChatFromUserRequestBody.idOfCreator).
-                orElseThrow(() -> new UserNotFoundException(newChatFromUserRequestBody.idOfCreator));
+        User creator = userRepository.findByName(currentUser.getUsername()).
+                orElseThrow(() -> new UsernameNotFoundException(currentUser.getUsername()));
         User requestedUser = userRepository.findById(newChatFromUserRequestBody.idOfRequested).
                 orElseThrow(() -> new UserNotFoundException(newChatFromUserRequestBody.idOfRequested));
         Set<User> usersOfTheChat = Set.of(creator, requestedUser);
@@ -58,7 +57,7 @@ public class ChatController {
 
 
     @PostMapping("/add_to_chat")
-    AddToChatResponse addingANewUserToTheChat(@RequestBody AddToChatRequest addToChatRequest){
+    AddToChatResponse addingANewUserToTheChat(@RequestBody AddToChatRequest addToChatRequest, @AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser){
         User requestedUser = userRepository.findById(addToChatRequest.requestedUserId).
                 orElseThrow( () -> new UserNotFoundException(addToChatRequest.requestedUserId));
         Chat changeableChat = chatRepository.findById(addToChatRequest.chatId).
@@ -73,7 +72,7 @@ public class ChatController {
     }
 
     @PostMapping ("/messages")
-    ArrayList<Message> messagesOfTheChat(@RequestBody messagesRequest info){
+    ArrayList<Message> messagesOfTheChat(@RequestBody messagesRequest info, @AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser){
         Chat chat = chatRepository.findById(info.chatId).orElseThrow(() -> new ChatNotFoundException(info.chatId));
         Set<Message> messages = chat.getMessagesInTheChat();
         ArrayList<Message> messageList = new ArrayList<Message>(messages);
