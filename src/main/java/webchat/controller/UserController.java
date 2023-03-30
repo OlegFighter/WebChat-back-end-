@@ -1,14 +1,11 @@
 package webchat.controller;
 
-import lombok.*;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import webchat.model.Chat;
 import webchat.model.Message;
@@ -17,11 +14,13 @@ import webchat.notFoundExceptions.ChatNotFoundException;
 import webchat.repository.ChatRepository;
 import webchat.repository.MessageRepository;
 import webchat.repository.UserRepository;
+import webchat.serializableClasses.Requests;
+import webchat.serializableClasses.Responses;
+import webchat.subModels.Contact;
+import webchat.subModels.VisualChat;
 
-import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.*;
 
 
 @RestController
@@ -40,39 +39,44 @@ public class UserController {
 
 
     @PostMapping("/sign_up")
-    AuthRequestBody createUser(@RequestBody NewAuthUserRequestBody newUser) {
-        User temp = new User(newUser.userName, passwordEncoder.encode(newUser.password));
-        this.userRepository.save(temp);
-        return new AuthRequestBody(temp.getUserId(), temp.getName());
+    Requests.AuthRequestBody createUser(@RequestBody Requests.NewAuthUserRequestBody newUser) {
+        User temp = new User(newUser.getUserName(), passwordEncoder.encode(newUser.getPassword()));
+        try{
+            this.userRepository.save(temp);
+        }catch (DataIntegrityViolationException e){
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Здравствуйте! Вы уже тут есть. Что вам ещё " +
+                    "надо? Два аккаунта захотел? А вот закатайте губу, пожалуйста!");
+        }
+        return new Requests.AuthRequestBody(temp.getUserId(), temp.getName());
     }
 
     @PostMapping("/new_user")
-    UserRequestBody createUserWithoutAuthorization(@RequestBody NewUserRequestBody newUserRequestBody) {
-        User temp = new User(newUserRequestBody.userName);
+    Requests.UserRequestBody createUserWithoutAuthorization(@RequestBody Requests.NewUserRequestBody newUserRequestBody) {
+        User temp = new User(newUserRequestBody.getUserName());
         this.userRepository.save(temp);
-        return new UserRequestBody(temp.getName(), temp.getUserId());
+        return new Requests.UserRequestBody(temp.getName(), temp.getUserId());
     }
 
     @PostMapping("/send")
-    MessageResponseBody sendMessageToAChat(@RequestBody MessageRequestBody messageRequestBody,
-                                           @AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser) {
-        Chat changeableChat = chatRepository.findById(messageRequestBody.chatId).
-                orElseThrow(() -> new ChatNotFoundException(messageRequestBody.chatId));
+    Responses.MessageResponseBody sendMessageToAChat(@RequestBody Requests.MessageRequestBody messageRequestBody,
+                                                     @AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser) {
+        Chat changeableChat = chatRepository.findById(messageRequestBody.getChatId()).
+                orElseThrow(() -> new ChatNotFoundException(messageRequestBody.getChatId()));
         User sender = userRepository.findByName(currentUser.getUsername()).
                 orElseThrow(() -> new UsernameNotFoundException(currentUser.getUsername()));
         LocalDateTime sendingDate = LocalDateTime.now();
-        Message sending = new Message(messageRequestBody.textOfMessage, sendingDate, sender.getUserId(), sender.getName());
+        Message sending = new Message(messageRequestBody.getTextOfMessage(), sendingDate, sender.getUserId(), sender.getName());
         changeableChat.addMessage(sending);
         messageRepository.save(sending);
         chatRepository.save(changeableChat);
-        return new MessageResponseBody(sending.getMessageId());
+        return new Responses.MessageResponseBody(sending.getMessageId());
     }
 
     @DeleteMapping("/delete_chat")
-    String deleteChat(@RequestBody DeleteChatRequestBody deleteChatRequestBody,
+    String deleteChat(@RequestBody Requests.DeleteChatRequestBody deleteChatRequestBody,
                       @AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser) {
-        Chat chatToDelete = chatRepository.findById(deleteChatRequestBody.chatId).
-                orElseThrow(() -> new ChatNotFoundException(deleteChatRequestBody.chatId));
+        Chat chatToDelete = chatRepository.findById(deleteChatRequestBody.getChatId()).
+                orElseThrow(() -> new ChatNotFoundException(deleteChatRequestBody.getChatId()));
         User actor = userRepository.findByName(currentUser.getUsername()).
                 orElseThrow(() -> new UsernameNotFoundException(currentUser.getUsername()));
         if (actor.getUserId() != chatToDelete.getCreatorId()) {
@@ -104,111 +108,53 @@ public class UserController {
         return response;
     }
 
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @ToString
-    @Getter
-    @Setter
-    public static class getUsersChatsRequest implements Serializable {
-        Long userId;
+    @PostMapping("/user_data")
+    Responses.UserDataResponseBody getUserData(
+            @AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser) {
+        User thisUser = userRepository.findByName(currentUser.getUsername()).
+                orElseThrow(() -> new UsernameNotFoundException(currentUser.getUsername())); // нашли пользователя
+        Set<Chat> usersChats = chatRepository.findByUser(thisUser); //возьмём все его чаты
+        Set<VisualChat> chats = new java.util.HashSet<VisualChat>(Set.of()); //заготовим формы для ответа
+        Iterator<Chat> chatIterator = usersChats.iterator(); // отсюда идёт блок копирования чатов для отправки клиенту
+        Chat tempChat = new Chat();
+        while (chatIterator.hasNext()) {
+            VisualChat temp = new VisualChat();
+            tempChat = chatIterator.next();
+            temp.setChatId(tempChat.getChatId());
+            temp.setChatName(tempChat.getChatName());
+            chats.add(temp);
+        } // закончили копирование
+        return new Responses.UserDataResponseBody(chats, thisUser.contactsToSerializable());
     }
 
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @ToString
-    @Getter
-    @Setter
-    public static class VisualChat implements Serializable {
-        String chatName;
-        Long chatId;
+    @PostMapping("/add_contact")
+    Set<Contact> addNewContact(@RequestBody Requests.addContactRequestBody addContactRequestBody,
+            @AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser) {
+        User thisUser = userRepository.findByName(currentUser.getUsername()).
+                orElseThrow(()->new UsernameNotFoundException(currentUser.getUsername()));
+        User requested = userRepository.findByName(addContactRequestBody.userName()).
+                orElseThrow(() -> new UsernameNotFoundException(addContactRequestBody.userName()));
+        if (thisUser.getContacts().contains(requested)){
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Этот пользователь уже есть среди ваших контактов!");
+            //return thisUser.contactsToSerializable();
+        }
+        Set<User> contactsOfThis = thisUser.getContacts();
+        Set<User> contactsOfrequested = requested.getContacts();
+        contactsOfrequested.add(thisUser);
+        contactsOfThis.add(requested);
+        userRepository.save(thisUser);
+        userRepository.save(requested);
+        return thisUser.contactsToSerializable();
     }
 
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @ToString
-    @Getter
-    @Setter
-    public static class UserRequestBody implements Serializable {
-        String userName;
-        Long id;
-    }
-
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @ToString
-    @Getter
-    @Setter
-    public static class NewUserRequestBody implements Serializable {
-        String userName;
-    }
-
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @ToString
-    @Getter
-    @Setter
-    public static class NewAuthUserRequestBody implements Serializable {
-        String userName;
-        String password;
-    }
-
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @ToString
-    @Getter
-    @Setter
-    public static class MessageRequestBody implements Serializable {
-        Long senderId;
-        Long chatId;
-        String textOfMessage;
-    }
-
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @ToString
-    @Getter
-    @Setter
-    public static class MessageResponseBody implements Serializable {
-        Long messageId;
-    }
-
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @ToString
-    @Getter
-    @Setter
-    public static class DeleteChatRequestBody implements Serializable {
-        Long chatId;
-        Long userId;
-    }
-
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @ToString
-    @Getter
-    @Setter
-    public static class AuthRequestBody implements Serializable {
-        Long id;
-        String userName;
-    }
-
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @ToString
-    @Getter
-    @Setter
-    public static class SingInResponceBody implements Serializable {
-        Long id;
-        String userName;
-    }
-
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @ToString
-    @Getter
-    @Setter
-    public static class SingInRequestBody implements Serializable {
-        String userName;
-        String password;
+    @PostMapping("/search")
+    Responses.SearchResponseBody globalUserSearch(@AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser){
+        List<User> buffer = userRepository.findAll();
+        List<Contact> allUsers = new ArrayList<>();
+        for (User user : buffer) {
+            allUsers.add(new Contact(user.getName()));
+        }
+        Collections.sort(allUsers);
+        return new Responses.SearchResponseBody(allUsers);
     }
 }
