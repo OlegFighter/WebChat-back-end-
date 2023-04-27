@@ -11,6 +11,7 @@ import webchat.model.Chat;
 import webchat.model.Message;
 import webchat.model.User;
 import webchat.notFoundExceptions.ChatNotFoundException;
+import webchat.notFoundExceptions.UserNotFoundException;
 import webchat.repository.ChatRepository;
 import webchat.repository.MessageRepository;
 import webchat.repository.UserRepository;
@@ -72,11 +73,11 @@ public class UserController {
         return new Responses.MessageResponseBody(sending.getMessageId());
     }
 
-    @DeleteMapping("/delete_chat")
-    String deleteChat(@RequestBody Requests.DeleteChatRequestBody deleteChatRequestBody,
+    @PostMapping("/delete_chat")
+    Responses.DeleteChatResponseBody deleteChat(@RequestBody Requests.DeleteChatRequestBody deleteChatRequestBody,
                       @AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser) {
-        Chat chatToDelete = chatRepository.findById(deleteChatRequestBody.getChatId()).
-                orElseThrow(() -> new ChatNotFoundException(deleteChatRequestBody.getChatId()));
+        Chat chatToDelete = chatRepository.findById(deleteChatRequestBody.chatId()).
+                orElseThrow(() -> new ChatNotFoundException(deleteChatRequestBody.chatId()));
         User actor = userRepository.findByName(currentUser.getUsername()).
                 orElseThrow(() -> new UsernameNotFoundException(currentUser.getUsername()));
         if (actor.getUserId() != chatToDelete.getCreatorId()) {
@@ -86,8 +87,56 @@ public class UserController {
         chatRepository.save(chatToDelete);
         chatRepository.deleteById(chatToDelete.getChatId());
         messageRepository.deleteAll(chatToDelete.getMessagesInTheChat());
-        return "Chat with id = " + chatToDelete.getChatId() + " was deleted.";
+        return new Responses.DeleteChatResponseBody("Chat with id = " + chatToDelete.getChatId() + " was deleted.");
     }
+
+    @PostMapping("/delete_contact")
+    Responses.DeleteContactResponseBody deleteContact(@AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser,
+                                                      Requests.DeleteContactRequestBody deleteContactRequestBody){
+        // Вытаскиваем обоих юзеров из репозитория
+        User thisUser = userRepository.findByName(currentUser.getUsername()).
+                orElseThrow(() -> new UsernameNotFoundException(currentUser.getUsername()));
+        User hisContact = userRepository.findByName(deleteContactRequestBody.contactName()).
+                orElseThrow(() -> new UsernameNotFoundException(deleteContactRequestBody.contactName()));
+
+        // Изменяем список контактов у обоих юзеров
+        Set<User> contactsOfThis = thisUser.getContacts();
+        Set<User> contactsOfHisContact = hisContact.getContacts();
+        contactsOfThis.remove(hisContact);
+        contactsOfHisContact.remove(thisUser);
+
+        // Сохраняем изменения в БД
+        userRepository.save(thisUser);
+        userRepository.save(hisContact);
+
+        return new Responses.DeleteContactResponseBody("User " + hisContact.getName() + " was removed from your contacts.");
+    }
+
+    @PostMapping("/delete_account")
+    Responses.DeleteUserResponseBody deleteAccount(@AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser){
+        User thisUser = userRepository.findByName(currentUser.getUsername()).
+                orElseThrow(() -> new UsernameNotFoundException(currentUser.getUsername()));
+
+        // посмотрим чаты, где он состоит
+        Set<Chat> chats = chatRepository.findByUser(thisUser);
+        for (Chat tempChat : chats) {
+            Set<User> usersOfChat = tempChat.getUsers();
+            usersOfChat.remove(thisUser);
+            chatRepository.save(tempChat);
+        }
+
+        // посмотрим контакты
+        Set<User> contacts  = thisUser.getContacts();
+        for (User tempContact : contacts) {
+            Set<User> contactsOfTemp = tempContact.getContacts();
+            contactsOfTemp.remove(thisUser);
+            userRepository.save(tempContact);
+        }
+
+        userRepository.delete(thisUser);
+        return new Responses.DeleteUserResponseBody("Your account was deleted.");
+    }
+
 
     @PostMapping("/user_chats")
     Set<VisualChat> getUsersChats(
@@ -130,22 +179,30 @@ public class UserController {
     @PostMapping("/add_contact")
     Set<Contact> addNewContact(@RequestBody Requests.addContactRequestBody addContactRequestBody,
             @AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser) {
+        //"вытаскиваем" из репозитория текущего юзера и того, кого хотим добавить
         User thisUser = userRepository.findByName(currentUser.getUsername()).
                 orElseThrow(()->new UsernameNotFoundException(currentUser.getUsername()));
         User requested = userRepository.findByName(addContactRequestBody.userName()).
                 orElseThrow(() -> new UsernameNotFoundException(addContactRequestBody.userName()));
+
+        // Если пользователь есть в списке контактов, то добавлять не надо
         if (thisUser.getContacts().contains(requested)){
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Этот пользователь уже есть среди ваших контактов!");
-            //return thisUser.contactsToSerializable();
         }
+
+        // У обоих(!!!) юзеров пополняем список контактов
         Set<User> contactsOfThis = thisUser.getContacts();
         Set<User> contactsOfrequested = requested.getContacts();
         contactsOfrequested.add(thisUser);
         contactsOfThis.add(requested);
+
+        // Сохраняем изменения в БД
         userRepository.save(thisUser);
         userRepository.save(requested);
+
         return thisUser.contactsToSerializable();
     }
+
 
     @PostMapping("/search")
     Responses.SearchResponseBody globalUserSearch(@AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser){

@@ -13,6 +13,10 @@ import java.util.Set;
 public class Responses {
 
     public record SearchResponseBody(List<Contact> allUsers) implements Serializable { }
+    public record DeleteContactResponseBody(String message) implements Serializable { }
+    public record DeleteChatResponseBody(String message) implements Serializable { }
+    public record DeleteUserResponseBody(String message) implements Serializable { }
+
 
     @AllArgsConstructor
     @NoArgsConstructor
