@@ -92,7 +92,7 @@ public class UserController {
 
     @PostMapping("/delete_contact")
     Responses.DeleteContactResponseBody deleteContact(@AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser,
-                                                      Requests.DeleteContactRequestBody deleteContactRequestBody){
+                                                      @RequestBody Requests.DeleteContactRequestBody deleteContactRequestBody){
         // Вытаскиваем обоих юзеров из репозитория
         User thisUser = userRepository.findByName(currentUser.getUsername()).
                 orElseThrow(() -> new UsernameNotFoundException(currentUser.getUsername()));
