@@ -10,7 +10,7 @@ public class Requests {
 
     public record addContactRequestBody (String userName) implements Serializable { }
 
-    public record DeleteChatRequestBody (Long chatId, Long userId) implements Serializable { }
+    public record DeleteChatRequestBody (Long chatId) implements Serializable { }
     public record DeleteContactRequestBody (String contactName) implements Serializable { }
 
     @AllArgsConstructor
