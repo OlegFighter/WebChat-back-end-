@@ -92,7 +92,7 @@ public class UserController {
 
     @PostMapping("/delete_contact")
     Responses.DeleteContactResponseBody deleteContact(@AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser,
-                                                      @RequestBody Requests.DeleteContactRequestBody deleteContactRequestBody){
+                                                       @RequestBody Requests.DeleteContactRequestBody deleteContactRequestBody){
         // Вытаскиваем обоих юзеров из репозитория
         User thisUser = userRepository.findByName(currentUser.getUsername()).
                 orElseThrow(() -> new UsernameNotFoundException(currentUser.getUsername()));
@@ -213,5 +213,11 @@ public class UserController {
         }
         Collections.sort(allUsers);
         return new Responses.SearchResponseBody(allUsers);
+    }
+
+    @PostMapping("/get_contacts")
+    Responses.UserContactsResponseBody contactsOfCurrentUser(@AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser){
+        User current = userRepository.findByName(currentUser.getUsername()).orElseThrow(() -> new UsernameNotFoundException(currentUser.getUsername()));
+        return new Responses.UserContactsResponseBody(current.contactsToSerializable());
     }
 }

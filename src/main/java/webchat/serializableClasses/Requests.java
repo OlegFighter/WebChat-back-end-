@@ -12,6 +12,8 @@ public class Requests {
 
     public record DeleteChatRequestBody (Long chatId) implements Serializable { }
     public record DeleteContactRequestBody (String contactName) implements Serializable { }
+    public record NewChatWithContactRequest (String userName, String chatName) implements Serializable { }
+
 
     @AllArgsConstructor
     @NoArgsConstructor

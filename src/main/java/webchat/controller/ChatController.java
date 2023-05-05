@@ -14,6 +14,8 @@ import webchat.notFoundExceptions.UserNotFoundException;
 import webchat.repository.ChatRepository;
 import webchat.repository.MessageRepository;
 import webchat.repository.UserRepository;
+import webchat.serializableClasses.Requests;
+import webchat.serializableClasses.Responses;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -81,6 +83,22 @@ public class ChatController {
         Collections.sort(messageList);
         return messageList;
     }
+
+    @PostMapping("/create_chat_with_contact")
+    Responses.NewChatWithContactResponse createChatWithContact(@RequestBody Requests.NewChatWithContactRequest newChatWithContactRequest,
+                                                               @AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser) {
+        User creator = userRepository.findByName(currentUser.getUsername()).
+                orElseThrow(() -> new UsernameNotFoundException(currentUser.getUsername()));
+        User requestedUser = userRepository.findByName(newChatWithContactRequest.userName()).
+                orElseThrow(() -> new UsernameNotFoundException(newChatWithContactRequest.userName()));
+        Set<User> usersOfChat = Set.of(creator, requestedUser);
+        Chat newChat = new Chat(newChatWithContactRequest.chatName(), usersOfChat, creator.getUserId());
+        chatRepository.save(newChat);
+        userRepository.save(creator);
+        userRepository.save(requestedUser);
+        return new Responses.NewChatWithContactResponse(newChat.getChatId());
+    }
+
 
     @PostMapping("/add_contact_to_chat")
     AddToChatResponse addingAContactToTheChat(@AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser,
