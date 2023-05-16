@@ -20,6 +20,7 @@ import webchat.serializableClasses.Responses;
 import webchat.subModels.Contact;
 import webchat.subModels.VisualChat;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -159,7 +160,7 @@ public class UserController {
 
     @PostMapping("/user_data")
     Responses.UserDataResponseBody getUserData(
-            @AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser) {
+            @AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser) throws IOException {
         User thisUser = userRepository.findByName(currentUser.getUsername()).
                 orElseThrow(() -> new UsernameNotFoundException(currentUser.getUsername())); // нашли пользователя
         Set<Chat> usersChats = chatRepository.findByUser(thisUser); //возьмём все его чаты
@@ -173,7 +174,7 @@ public class UserController {
             temp.setChatName(tempChat.getChatName());
             chats.add(temp);
         } // закончили копирование
-        return new Responses.UserDataResponseBody(chats, thisUser.contactsToSerializable());
+        return new Responses.UserDataResponseBody(chats, thisUser.contactsToSerializable(), thisUser.avatarsOfContacts());
     }
 
     @PostMapping("/add_contact")
