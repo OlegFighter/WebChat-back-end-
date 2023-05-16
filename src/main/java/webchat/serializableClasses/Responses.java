@@ -7,6 +7,7 @@ import webchat.subModels.Contact;
 import webchat.subModels.VisualChat;
 
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
@@ -29,6 +30,7 @@ public class Responses {
     public static class UserDataResponseBody implements Serializable {
         Set<VisualChat> userChats;
         Set<Contact> userContacts;
+        HashMap<String, byte[]> avatarsOfContacts;
     }
 
     @AllArgsConstructor

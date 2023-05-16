@@ -2,11 +2,14 @@ package webchat.model;
 
 import lombok.Getter;
 import lombok.Setter;
+import webchat.invalidLinkException.InvalidLinkException;
 import webchat.subModels.Contact;
 
 import javax.persistence.*;
-import java.util.Iterator;
-import java.util.Set;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
 
 @Getter
 @Setter
@@ -21,6 +24,7 @@ public class User{
     String password;
     @ManyToMany
     Set<User> contacts = Set.of();
+    String avatarLink = null;
 //    @ManyToMany(mappedBy = "users")
 //    Set<Chat> chats;
 
@@ -49,5 +53,28 @@ public class User{
             userContacts.add(tempContact);
         }
         return userContacts;
+    }
+
+    public HashMap<String, byte[]> avatarsOfContacts() throws IOException {
+        if (contacts == null) {
+            return new HashMap<>(Map.of());
+        }
+        HashMap<String, byte[]> result = new HashMap<>();
+        User tempUser = new User();
+        Iterator<User> contactIterator = contacts.iterator();
+        try{
+            while (contactIterator.hasNext()) {
+                tempUser = contactIterator.next();
+                if(tempUser.avatarLink == null){
+                    result.put(tempUser.name, null);
+                }else {
+                    result.put(tempUser.name, Files.readAllBytes(Path.of(tempUser.avatarLink)));
+                }
+            }
+        }catch(IllegalArgumentException | NullPointerException | IOException | StringIndexOutOfBoundsException e){
+            throw new InvalidLinkException(tempUser.avatarLink, e);
+        }
+
+        return result;
     }
 }
