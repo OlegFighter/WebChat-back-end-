@@ -7,6 +7,7 @@ import java.io.Serializable;
 
 public class Requests {
     public record UserRequestBody(String userName, Long id) implements Serializable { }
+    public record chatInfoRequest(long chatId) implements Serializable { }
 
     public record addContactRequestBody (String userName) implements Serializable { }
 

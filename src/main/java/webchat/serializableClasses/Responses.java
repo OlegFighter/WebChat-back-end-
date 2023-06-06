@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Set;
 
 public class Responses {
+    public record chatInfoResponse(String creator, List<String> members, int numberOfMembers) implements Serializable { }
 
     public record SearchResponseBody(List<Contact> allUsers) implements Serializable { }
     public record UserContactsResponseBody(Set<Contact> contacts) implements Serializable { }

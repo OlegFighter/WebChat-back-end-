@@ -18,10 +18,7 @@ import webchat.serializableClasses.Requests;
 import webchat.serializableClasses.Responses;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @RestController
 public class ChatController {
@@ -117,6 +114,23 @@ public class ChatController {
         userRepository.save(requestedUser);
         return new AddToChatResponse(requestedUser.getUserId());
 
+    }
+
+    @PostMapping("/chat_info")
+    Responses.chatInfoResponse chatInfo(@AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser,
+                                        @RequestBody Requests.chatInfoRequest chatInfoRequest){
+        Chat current = chatRepository.findById(chatInfoRequest.chatId())
+                .orElseThrow(() -> new ChatNotFoundException(chatInfoRequest.chatId()));
+        User creator = userRepository.findById(current.getCreatorId())
+                .orElseThrow(() -> new UserNotFoundException(current.getCreatorId()));
+        String creatorName = creator.getName();
+        Set<User> members = current.getUsers();
+        Iterator<User> iter = members.iterator();
+        List<String> memberName = new ArrayList<>();
+        while (iter.hasNext()){
+            memberName.add(iter.next().getName());
+        }
+        return new Responses.chatInfoResponse(creatorName, memberName, memberName.size());
     }
 
     @AllArgsConstructor
