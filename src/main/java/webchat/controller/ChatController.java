@@ -1,11 +1,13 @@
 package webchat.controller;
 
 import lombok.*;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 import webchat.model.Chat;
 import webchat.model.Message;
 import webchat.model.User;
@@ -98,16 +100,15 @@ public class ChatController {
 
 
     @PostMapping("/add_contact_to_chat")
-    AddToChatResponse addingAContactToTheChat(@AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser,
-                                              @RequestBody AddContactToChatRequest addContactToChatRequest) {
+    AddToChatResponse addingAContactToTheChat(@RequestBody AddContactToChatRequest addContactToChatRequest, @AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser) {
         User thisUser = userRepository.findByName(currentUser.getUsername()).
                 orElseThrow(() -> new UsernameNotFoundException(currentUser.getUsername()));
         User requestedUser = userRepository.findByName(addContactToChatRequest.name).
-                orElseThrow(() -> new UsernameNotFoundException(addContactToChatRequest.name));
+                orElseThrow(() -> new UserNotFoundException(addContactToChatRequest.name));
         Chat changeableChat = chatRepository.findById(addContactToChatRequest.chatId).
                 orElseThrow(() -> new ChatNotFoundException(addContactToChatRequest.chatId));
         if (changeableChat.getUsers().contains(requestedUser)) {
-            return new AddToChatResponse(null);
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "This user already exist in the chat.");
         }
         changeableChat.addUser(requestedUser);
         chatRepository.save(changeableChat);

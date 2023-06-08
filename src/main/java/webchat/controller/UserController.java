@@ -46,8 +46,7 @@ public class UserController {
         try{
             this.userRepository.save(temp);
         }catch (DataIntegrityViolationException e){
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Здравствуйте! Вы уже тут есть. Что вам ещё " +
-                    "надо? Два аккаунта захотел? А вот закатайте губу, пожалуйста!");
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "User with this name already exist! Try to sign in or enter another name.");
         }
         return new Requests.AuthRequestBody(temp.getUserId(), temp.getName());
     }
@@ -161,8 +160,13 @@ public class UserController {
     @PostMapping("/user_data")
     Responses.UserDataResponseBody getUserData(
             @AuthenticationPrincipal org.springframework.security.core.userdetails.User currentUser) throws IOException {
-        User thisUser = userRepository.findByName(currentUser.getUsername()).
-                orElseThrow(() -> new UsernameNotFoundException(currentUser.getUsername())); // нашли пользователя
+        User thisUser;
+        try {
+            thisUser = userRepository.findByName(currentUser.getUsername()).
+                    orElseThrow(() -> new UsernameNotFoundException(currentUser.getUsername()));
+        } catch (UsernameNotFoundException e) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Wrong password or name!");
+        }
         Set<Chat> usersChats = chatRepository.findByUser(thisUser); //возьмём все его чаты
         Set<VisualChat> chats = new java.util.HashSet<VisualChat>(Set.of()); //заготовим формы для ответа
         Iterator<Chat> chatIterator = usersChats.iterator(); // отсюда идёт блок копирования чатов для отправки клиенту
@@ -184,11 +188,11 @@ public class UserController {
         User thisUser = userRepository.findByName(currentUser.getUsername()).
                 orElseThrow(()->new UsernameNotFoundException(currentUser.getUsername()));
         User requested = userRepository.findByName(addContactRequestBody.userName()).
-                orElseThrow(() -> new UsernameNotFoundException(addContactRequestBody.userName()));
+                orElseThrow(() -> new UserNotFoundException(addContactRequestBody.userName(), "does not exist!"));
 
         // Если пользователь есть в списке контактов, то добавлять не надо
         if (thisUser.getContacts().contains(requested)){
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Этот пользователь уже есть среди ваших контактов!");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This user already exist in your contacts!");
         }
 
         // У обоих(!!!) юзеров пополняем список контактов
